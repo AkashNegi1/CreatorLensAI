@@ -1,0 +1,147 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Project {
+  id        String        @id @default(uuid())
+  status    ProjectStatus @default(PROCESSING)
+  error     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  sessions  ChatSession[]
+  videos    Video[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Video {
+  id               String            @id @default(uuid())
+  projectId        String
+  label            VideoLabel
+  platform         Platform
+  url              String
+  externalId       String?
+  title            String?
+  creator          String?
+  creatorUrl       String?
+  views            BigInt?
+  likes            BigInt?
+  comments         BigInt? 
+  followerCount    BigInt?
+  engagementRate   Float?
+  uploadDate       DateTime?
+  durationSeconds  Int?
+  transcriptStatus TranscriptStatus  @default(MISSING)
+  metadataSource   MetadataSource    @default(UNAVAILABLE)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  chunks           TranscriptChunk[]
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  hashtags         VideoHashtag[]
+
+  @@unique([projectId, label])
+  @@index([projectId])
+  @@index([platform])
+  @@index([externalId])
+  @@index([engagementRate])
+}
+
+model Hashtag {
+  id        String         @id @default(uuid())
+  name      String         @unique
+  createdAt DateTime       @default(now())
+  videos    VideoHashtag[]
+}
+
+model VideoHashtag {
+  videoId   String
+  hashtagId String
+  hashtag   Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+  video     Video   @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@id([videoId, hashtagId])
+  @@index([hashtagId])
+}
+
+model TranscriptChunk {
+  id         String   @id @default(uuid())
+  videoId    String
+  chunkIndex Int
+  startTime  Float?
+  endTime    Float?
+  text       String
+  vectorId   String?
+  createdAt  DateTime @default(now())
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, chunkIndex])
+  @@index([videoId])
+  @@index([vectorId])
+}
+
+model ChatSession {
+  id        String        @id @default(uuid())
+  projectId String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messages  ChatMessage[]
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+model ChatMessage {
+  id        String      @id @default(uuid())
+  sessionId String
+  role      ChatRole
+  content   String
+  citations Json?
+  createdAt DateTime    @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+enum ProjectStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum VideoLabel {
+  A
+  B
+}
+
+enum Platform {
+  YOUTUBE
+  INSTAGRAM
+}
+
+enum TranscriptStatus {
+  AVAILABLE
+  MISSING
+  GENERATED_WITH_WHISPER
+  FAILED
+}
+
+enum MetadataSource {
+  YOUTUBE_API
+  INSTAGRAM_API
+  YT_DLP
+  FALLBACK
+  UNAVAILABLE
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+}
