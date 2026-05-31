@@ -15,8 +15,6 @@ export async function analyzeProject(videoAUrl: string, videoBUrl: string) {
       fetchVideoData("B", videoBUrl),
     ]);
 
-    const createdVideos = [];
-
     for (const video of [videoA, videoB]) {
       const transcriptChunks = buildTranscriptChunks(video.transcript);
       const createdVideo = await prisma.video.create({
@@ -58,22 +56,24 @@ export async function analyzeProject(videoAUrl: string, videoBUrl: string) {
         },
       });
 
-      for (const tag of video.hashtags) {
-        const hashtag = await prisma.hashtag.upsert({
-          where: { name: tag },
-          update: {},
-          create: { name: tag },
-        });
+      const hashtagResults = await Promise.all(
+        video.hashtags.map((tag) =>
+          prisma.hashtag.upsert({
+            where: { name: tag },
+            update: {},
+            create: { name: tag },
+          })
+        )
+      );
 
-        await prisma.videoHashtag.create({
-          data: {
+      if (hashtagResults.length > 0) {
+        await prisma.videoHashtag.createMany({
+          data: hashtagResults.map((hashtag) => ({
             videoId: createdVideo.id,
             hashtagId: hashtag.id,
-          },
+          })),
         });
       }
-
-      createdVideos.push(createdVideo);
     }
     
     await indexProjectTranscriptChunks(project.id);

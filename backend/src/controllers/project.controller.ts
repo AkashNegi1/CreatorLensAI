@@ -5,11 +5,6 @@ export async function analyzeProjectController(req: Request, res: Response) {
   try {
     const { videoAUrl, videoBUrl } = req.body;
 
-    if (!videoAUrl || !videoBUrl) {
-      return res.status(400).json({
-        message: "videoAUrl and videoBUrl are required.",
-      });
-    }
     const project = await analyzeProject(videoAUrl, videoBUrl);
 
     return res.status(201).json(serializeBigInt(project));
@@ -24,9 +19,6 @@ export async function analyzeProjectController(req: Request, res: Response) {
 
     return res.status(500).json({
       message: "Failed to analyze project",
-      code: error?.code,
-      error: error?.message,
-      meta: error?.meta,
     });
   }
 }

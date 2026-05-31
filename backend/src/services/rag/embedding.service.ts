@@ -38,10 +38,13 @@ export async function embedDocument(text: string): Promise<number[]> {
 }
 
 export async function embedDocuments(texts: string[]): Promise<number[][]> {
+  const concurrency = 4;
   const vectors: number[][] = [];
 
-  for (const text of texts) {
-    vectors.push(await embedDocument(text));
+  for (let i = 0; i < texts.length; i += concurrency) {
+    const batch = texts.slice(i, i + concurrency);
+    const batchResults = await Promise.all(batch.map(embedDocument));
+    vectors.push(...batchResults);
   }
 
   return vectors;

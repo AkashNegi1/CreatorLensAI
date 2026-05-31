@@ -76,15 +76,11 @@ export async function indexProjectTranscriptChunks(projectId: string) {
   }
   await upsertChunkVectors(points);
 
-  await Promise.all(
+  await prisma.$transaction(
     points.map((point) =>
       prisma.transcriptChunk.update({
-        where: {
-          id: point.payload.chunkId,
-        },
-        data: {
-          vectorId: point.id,
-        },
+        where: { id: point.payload.chunkId },
+        data: { vectorId: point.id },
       }),
     ),
   );

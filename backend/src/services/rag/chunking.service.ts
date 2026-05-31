@@ -9,7 +9,7 @@ export type BuiltTranscriptChunk = {
 
 export function buildTranscriptChunks(
   transcript: TranscriptSegment[],
-  targetChars = 700
+  targetChars = 400
 ): BuiltTranscriptChunk[] {
   const chunks: BuiltTranscriptChunk[] = [];
 
