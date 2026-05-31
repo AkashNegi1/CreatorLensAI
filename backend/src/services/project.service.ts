@@ -1,8 +1,9 @@
 import { prisma } from "../db/prisma.js";
 import { fetchVideoData } from "./ingestion/ingestion.service.js";
-
+import { buildTranscriptChunks } from "./rag/chunking.service.js";
+import { indexProjectTranscriptChunks } from "./rag/indexing.service.js";
 export async function analyzeProject(videoAUrl: string, videoBUrl: string) {
-    const project = await prisma.project.create({
+  const project = await prisma.project.create({
     data: {
       status: "PROCESSING",
     },
@@ -13,10 +14,11 @@ export async function analyzeProject(videoAUrl: string, videoBUrl: string) {
       fetchVideoData("A", videoAUrl),
       fetchVideoData("B", videoBUrl),
     ]);
-        
+
     const createdVideos = [];
 
     for (const video of [videoA, videoB]) {
+      const transcriptChunks = buildTranscriptChunks(video.transcript);
       const createdVideo = await prisma.video.create({
         data: {
           projectId: project.id,
@@ -43,11 +45,11 @@ export async function analyzeProject(videoAUrl: string, videoBUrl: string) {
           metadataSource: video.metadataSource,
 
           chunks: {
-            create: video.transcript.map((segment, index) => ({
-              chunkIndex: index,
-              startTime: segment.start,
-              endTime: segment.start + (segment.duration ?? 0),
-              text: segment.text,
+            create: transcriptChunks.map((chunk) => ({
+              chunkIndex: chunk.chunkIndex,
+              startTime: chunk.startTime,
+              endTime: chunk.endTime,
+              text: chunk.text,
             })),
           },
         },
@@ -73,7 +75,9 @@ export async function analyzeProject(videoAUrl: string, videoBUrl: string) {
 
       createdVideos.push(createdVideo);
     }
-
+    
+    await indexProjectTranscriptChunks(project.id);
+    
     const completedProject = await prisma.project.update({
       where: { id: project.id },
       data: { status: "COMPLETED" },

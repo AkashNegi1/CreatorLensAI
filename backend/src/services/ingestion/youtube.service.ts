@@ -37,7 +37,8 @@ export async function fetchYoutubeVideoData(params: {
     throw new Error("YOUTUBE_API_KEY is missing in .env");
   }
 
-  const response = await axios.get(
+  const response = await withRetry(()=> 
+    axios.get(
     "https://www.googleapis.com/youtube/v3/videos",
     {
       params: {
@@ -46,7 +47,7 @@ export async function fetchYoutubeVideoData(params: {
         key: apiKey,
       },
     },
-  );
+  ));
 
   const item = response.data.items?.[0];
 
@@ -117,4 +118,47 @@ export async function fetchYoutubeVideoData(params: {
     transcriptStatus,
     metadataSource: "YOUTUBE_API",
   };
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  delayMs = 1000
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+
+      const code = error?.code;
+      const status = error?.response?.status;
+
+      const retryable =
+        code === "ECONNRESET" ||
+        code === "ETIMEDOUT" ||
+        code === "ENOTFOUND" ||
+        code === "EAI_AGAIN" ||
+        status === 429 ||
+        status >= 500;
+
+      console.warn("YouTube API attempt failed:", {
+        attempt,
+        retries,
+        code,
+        status,
+        message: error?.message,
+      });
+
+      if (!retryable || attempt === retries) {
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+    }
+  }
+
+  throw lastError;
 }
