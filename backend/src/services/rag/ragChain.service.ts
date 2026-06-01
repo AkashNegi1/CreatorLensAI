@@ -39,7 +39,7 @@ const METRIC_KEYWORDS: { regex: RegExp; field: string }[] = [
   { regex: /\blikes?\b/i, field: "likes" },
   { regex: /\bcomments?\b/i, field: "comments" },
   { regex: /\bcreator\b/i, field: "creator" },
-  { regex: /\bfollowers?\b|\bfollower\s+count\b/i, field: "followerCount" },
+  { regex: /\bfollowers?\b|\bfollower\s+count\b|\bsubscribers?\b|\bsubscriber\s+count\b/i, field: "followerCount" },
   { regex: /\bupload\s+date\b|\bpublished\b/i, field: "uploadDate" },
   { regex: /\bduration\b|\blength\b/i, field: "durationSeconds" },
 ];

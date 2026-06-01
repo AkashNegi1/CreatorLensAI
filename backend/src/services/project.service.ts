@@ -2,6 +2,8 @@ import { prisma } from "../db/prisma.js";
 import { fetchVideoData } from "./ingestion/ingestion.service.js";
 import { buildTranscriptChunks } from "./rag/chunking.service.js";
 import { indexProjectTranscriptChunks } from "./rag/indexing.service.js";
+import { DEMO_LIMITS } from "../config/demoLimits.js";
+
 export async function analyzeProject(videoAUrl: string, videoBUrl: string) {
   const project = await prisma.project.create({
     data: {
@@ -14,6 +16,17 @@ export async function analyzeProject(videoAUrl: string, videoBUrl: string) {
       fetchVideoData("A", videoAUrl),
       fetchVideoData("B", videoBUrl),
     ]);
+
+    for (const video of [videoA, videoB]) {
+      if (
+        video.durationSeconds !== null &&
+        video.durationSeconds > DEMO_LIMITS.MAX_VIDEO_DURATION_SECONDS
+      ) {
+        const maxMin = DEMO_LIMITS.MAX_VIDEO_DURATION_SECONDS / 60;
+        const errMsg = `Video ${video.label} is longer than ${maxMin} minutes. This demo supports videos up to ${maxMin} minutes. Please use shorter videos for faster analysis.`;
+        throw new Error(errMsg);
+      }
+    }
 
     for (const video of [videoA, videoB]) {
       const transcriptChunks = buildTranscriptChunks(video.transcript);

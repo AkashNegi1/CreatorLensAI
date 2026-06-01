@@ -1,4 +1,5 @@
 import type { TranscriptSegment } from "../../types/video.types.js";
+import { DEMO_LIMITS } from "../../config/demoLimits.js";
 
 export type BuiltTranscriptChunk = {
   chunkIndex: number;
@@ -54,5 +55,14 @@ export function buildTranscriptChunks(
     });
   }
 
-  return chunks;
+  const originalCount = chunks.length;
+  const limitedChunks = chunks.slice(0, DEMO_LIMITS.MAX_CHUNKS_PER_VIDEO);
+
+  if (originalCount > limitedChunks.length) {
+    console.warn(
+      `[Chunking] Truncated chunks: ${originalCount} -> ${limitedChunks.length} (max ${DEMO_LIMITS.MAX_CHUNKS_PER_VIDEO})`,
+    );
+  }
+
+  return limitedChunks;
 }

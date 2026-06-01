@@ -1,5 +1,6 @@
 import express from "express";
 import type {Application} from "express";
+import cors from "cors";
 import dotenv from 'dotenv';
 import { projectRouter } from "./routes/project.routes.js";
 import { chatRouter } from "./routes/chat.routes.js";
@@ -11,6 +12,14 @@ dotenv.config();
 const app: Application = express();
 const port = Number(process.env.PORT);
 app.use(express.json());
+
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+  ],
+  credentials: true,
+}));
 
 app.use(globalLimiter);
 

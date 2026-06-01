@@ -1,6 +1,11 @@
 import type { Request, Response } from "express";
 import { analyzeProject } from "../services/project.service.js";
 import { serializeBigInt } from "../utils/json.js";
+
+function isDurationError(message: string): boolean {
+  return message.includes("is longer than");
+}
+
 export async function analyzeProjectController(req: Request, res: Response) {
   try {
     const { videoAUrl, videoBUrl } = req.body;
@@ -17,8 +22,16 @@ export async function analyzeProjectController(req: Request, res: Response) {
       stack: error?.stack,
     });
 
+    const message: string =
+      typeof error?.message === "string" ? error.message : "";
+
+    if (isDurationError(message)) {
+      return res.status(400).json({ error: message });
+    }
+
     return res.status(500).json({
-      message: "Failed to analyze project",
+      error:
+        "Project analysis failed. Please try again with shorter videos or check backend logs.",
     });
   }
 }

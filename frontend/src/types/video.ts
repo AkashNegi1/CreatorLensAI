@@ -1,0 +1,20 @@
+export type Video = {
+  id: string;
+  projectId: string;
+  label: string;
+  platform: string;
+  url: string;
+  title: string | null;
+  creator: string | null;
+  views: string | null;
+  likes: string | null;
+  comments: string | null;
+  followerCount: string | null;
+  engagementRate: number | null;
+  uploadDate: string | null;
+  durationSeconds: number | null;
+  transcriptStatus: string;
+  metadataSource: string;
+  hashtags: { hashtag: { name: string } }[];
+  chunks?: unknown[];
+};

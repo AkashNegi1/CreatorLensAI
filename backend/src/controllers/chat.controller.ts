@@ -39,10 +39,13 @@ export async function askController(req: Request, res: Response) {
       await prisma.chatSession.create({ data: { projectId } })
     ).id;
 
-    const videos = await prisma.video.findMany({
+    const videos = (await prisma.video.findMany({
       where: { projectId },
       include: { hashtags: { include: { hashtag: true } } },
-    });
+    })).map(v => ({
+      ...v,
+      transcriptAvailable: v.transcriptStatus === "AVAILABLE" || v.transcriptStatus === "GENERATED_WITH_WHISPER",
+    }));
 
     const chunks = await retrieveRelevantChunks({ projectId, question, limit: 6 });
 
@@ -102,11 +105,18 @@ export async function streamController(req: Request, res: Response) {
       await prisma.chatSession.create({ data: { projectId } })
     ).id;
 
+    const projectVideos = prisma.video.findMany({
+      where: { projectId },
+      include: { hashtags: { include: { hashtag: true } } },
+    });
+
     const [videos, chunks, history] = await Promise.all([
-      prisma.video.findMany({
-        where: { projectId },
-        include: { hashtags: { include: { hashtag: true } } },
-      }),
+      projectVideos.then(rows =>
+        rows.map(v => ({
+          ...v,
+          transcriptAvailable: v.transcriptStatus === "AVAILABLE" || v.transcriptStatus === "GENERATED_WITH_WHISPER",
+        }))
+      ),
       retrieveRelevantChunks({ projectId, question, limit: 6 }),
       prisma.chatMessage.findMany({
         where: { sessionId },

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { QdrantClient } from "@qdrant/js-client-rest";
+import { DEMO_LIMITS } from "../../config/demoLimits.js";
 
 export const qdrant = new QdrantClient({
   url: process.env.QDRANT_URL ?? "http://localhost:6333",
@@ -40,6 +41,33 @@ export type QdrantChunkPayload = {
   sourceUrl: string;
 };
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  label: string,
+  maxRetries: number,
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      console.warn(`[Retry] ${label} failed attempt ${attempt}/${maxRetries}`, error);
+
+      if (attempt < maxRetries) {
+        await sleep(attempt * 500);
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 export async function upsertChunkVectors(
   points: {
     id: string;
@@ -51,8 +79,26 @@ export async function upsertChunkVectors(
 
   await ensureQdrantCollection();
 
-  await qdrant.upsert(QDRANT_COLLECTION, {
-    wait: true,
-    points,
-  });
+  const totalPoints = points.length;
+  const batchSize = DEMO_LIMITS.QDRANT_UPSERT_BATCH_SIZE;
+  const totalBatches = Math.ceil(totalPoints / batchSize);
+
+  for (let i = 0; i < totalBatches; i++) {
+    const batch = points.slice(i * batchSize, (i + 1) * batchSize);
+    const batchNumber = i + 1;
+
+    console.log(`[Qdrant] Upserting batch ${batchNumber}/${totalBatches} with ${batch.length} points`);
+
+    await withRetry(
+      () =>
+        qdrant.upsert(QDRANT_COLLECTION, {
+          wait: true,
+          points: batch,
+        }),
+      `Qdrant upsert batch ${batchNumber}/${totalBatches}`,
+      DEMO_LIMITS.QDRANT_UPSERT_MAX_RETRIES,
+    );
+  }
+
+  console.log(`[Qdrant] Upserted ${totalPoints} points in ${totalBatches} batch(es)`);
 }

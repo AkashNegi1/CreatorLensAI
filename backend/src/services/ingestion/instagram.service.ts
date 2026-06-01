@@ -15,10 +15,10 @@ function extractHashtags(text?: string | null): string[] {
 }
 
 function safeNumber(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "number" && Number.isFinite(value) && value !== -1) return value;
   if (typeof value === "string" && value.trim() !== "") {
     const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : null;
+    return Number.isFinite(parsed) && parsed !== -1 ? parsed : null;
   }
 
   return null;

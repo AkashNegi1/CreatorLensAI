@@ -37,7 +37,7 @@ export async function fetchYoutubeVideoData(params: {
     throw new Error("YOUTUBE_API_KEY is missing in .env");
   }
 
-  const response = await withRetry(()=> 
+  const response = await withRetry(()=>
     axios.get(
     "https://www.googleapis.com/youtube/v3/videos",
     {
@@ -46,6 +46,7 @@ export async function fetchYoutubeVideoData(params: {
         id: params.externalId,
         key: apiKey,
       },
+      timeout: 10000,
     },
   ));
 
@@ -58,6 +59,32 @@ export async function fetchYoutubeVideoData(params: {
   const snippet = item.snippet;
   const statistics = item.statistics;
   const contentDetails = item.contentDetails;
+
+  let followerCount: number | null = null;
+
+  if (snippet.channelId) {
+    try {
+      const channelResponse = await withRetry(() =>
+        axios.get("https://www.googleapis.com/youtube/v3/channels", {
+          params: {
+            part: "statistics",
+            id: snippet.channelId,
+            key: apiKey,
+          },
+          timeout: 10000,
+        }),
+      );
+
+      const channelItem = channelResponse.data.items?.[0];
+      const subscriberCount = channelItem?.statistics?.subscriberCount;
+      followerCount = subscriberCount ? Number(subscriberCount) : null;
+    } catch (error: any) {
+      console.warn("YouTube channel stats fetch failed:", {
+        channelId: snippet.channelId,
+        message: error?.message,
+      });
+    }
+  }
 
   let transcript: NormalizedVideoData["transcript"] = [];
   let transcriptStatus: NormalizedVideoData["transcriptStatus"] = "MISSING";
@@ -102,7 +129,7 @@ export async function fetchYoutubeVideoData(params: {
     views,
     likes,
     comments,
-    followerCount: null,
+    followerCount,
 
     engagementRate: calculateEngagementRate({ likes, comments, views }),
 

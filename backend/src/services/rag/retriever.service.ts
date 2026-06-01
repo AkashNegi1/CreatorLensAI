@@ -67,6 +67,7 @@ export async function retrieveRelevantChunks(params: {
     vector: queryVector,
     limit: params.limit ?? 6,
     with_payload: true,
+    score_threshold: 0.3,
     filter: {
       must: mustConditions,
     },
