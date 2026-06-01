@@ -6,9 +6,9 @@ services:
     container_name: creatorlens-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: creatorlens
-      POSTGRES_PASSWORD: creatorlens_password
-      POSTGRES_DB: creatorlens_db
+      POSTGRES_USER: ${POSTGRES_USER:-creatorlens}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-creatorlens_password}
+      POSTGRES_DB: ${POSTGRES_DB:-creatorlens_db}
     ports:
       - "5433:5432"
     volumes:
